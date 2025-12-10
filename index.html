@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>2026 · 我们的100件小事</title>
+<style>
+:root{
+  --bg:#0f172a;--card:#121c35;--text:#e2e8f0;--muted:#94a3b8;--accent:#38bdf8;--accent2:#facc15;--danger:#f472b6;
+  --shadow:0 10px 30px rgba(0,0,0,0.35);
+  font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:radial-gradient(circle at 20% 20%,rgba(56,189,248,0.25),transparent 30%),radial-gradient(circle at 80% 0,rgba(250,204,21,0.18),transparent 25%),var(--bg);color:var(--text);}
+header{padding:28px 20px 10px;max-width:900px;margin:auto;text-align:center;}
+h1{margin:0;font-size:32px;letter-spacing:1px;}
+.subtitle{color:var(--muted);margin-top:6px;}
+.container{max-width:900px;margin:0 auto 80px;padding:0 16px;}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0;}
+input[type="search"]{flex:1;min-width:180px;padding:10px 12px;border-radius:10px;border:1px solid #1f2a44;background:#0b1324;color:var(--text);}
+select,button{padding:10px 12px;border-radius:10px;border:1px solid #1f2a44;background:#0b1324;color:var(--text);cursor:pointer;}
+button.primary{background:linear-gradient(120deg,var(--accent),var(--accent2));color:#0b1224;border:none;font-weight:600;}
+button.ghost{border:1px solid #1f2a44;}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;border:1px solid #1f2a44;color:var(--muted);}
+.list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.card{background:var(--card);border:1px solid #1f2a44;border-radius:14px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px;}
+.card h3{margin:0;font-size:16px;line-height:1.4;}
+.meta{display:flex;gap:8px;flex-wrap:wrap;}
+.status{display:flex;gap:6px;flex-wrap:wrap;}
+.status button{border:1px solid #1f2a44;background:#0b1324;}
+.status button.active{background:var(--accent);color:#0b1224;border-color:transparent;}
+.note{width:100%;min-height:48px;border-radius:10px;border:1px solid #1f2a44;background:#0b1324;color:var(--text);padding:8px;font-size:13px;resize:vertical;}
+.progress{margin:16px 0;padding:12px 14px;background:#0b1324;border:1px solid #1f2a44;border-radius:12px;display:flex;flex-direction:column;gap:6px;}
+.progress-bar{height:10px;border-radius:999px;background:#0b1324;border:1px solid #1f2a44;overflow:hidden;}
+.progress-bar div{height:100%;background:linear-gradient(120deg,var(--accent),var(--accent2));width:0;}
+.small{font-size:12px;color:var(--muted);}
+.timeline{margin:20px 0;padding:12px 14px;background:#0b1324;border:1px solid #1f2a44;border-radius:12px;}
+.footer{margin:30px auto 50px;max-width:900px;text-align:center;color:var(--muted);font-size:13px;}
+@media(max-width:600px){h1{font-size:26px;}}
+</style>
+</head>
+<body>
+<header>
+  <h1>2026 · 我们的100件小事</h1>
+  <div class="subtitle">跨年礼物 · 记录、完成、回忆 · 数据保存在你的浏览器</div>
+</header>
+
+<div class="container">
+  <div class="progress">
+    <div id="progress-text"></div>
+    <div class="progress-bar"><div id="progress-bar"></div></div>
+    <div class="small" id="category-stats"></div>
+  </div>
+
+  <div class="controls">
+    <input id="search" type="search" placeholder="搜索关键词..." />
+    <select id="category">
+      <option value="all">全部分类</option>
+    </select>
+    <select id="sort">
+      <option value="default">排序：默认</option>
+      <option value="status">排序：状态（优先待做/进行中）</option>
+      <option value="category">排序：分类</option>
+      <option value="random">排序：随机</option>
+    </select>
+    <select id="status-filter">
+      <option value="all">全部状态</option>
+      <option value="todo">待做</option>
+      <option value="doing">进行中</option>
+      <option value="done">已完成</option>
+    </select>
+    <button id="random" class="ghost">随机抽一项</button>
+    <button id="export" class="ghost">导出数据</button>
+    <button id="import" class="ghost">导入数据</button>
+    <input id="import-file" type="file" accept=".json" style="display:none" />
+  </div>
+
+  <div class="timeline">
+    <div><strong>今年的小约定：</strong>每周至少做 1-2 件事，完成一类就庆祝一下。</div>
+    <div id="countdown" class="small"></div>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<div class="footer">
+  献给你 · 数据仅存于本地浏览器 · 可以导出/导入备份
+</div>
+
+<script>
+const data = [
+  {id:1,title:"重现第一次约会",category:"仪式纪念"},
+  {id:2,title:"互写一封跨年信并封存",category:"仪式纪念"},
+  {id:3,title:"夜骑看城市灯光",category:"微冒险"},
+  {id:4,title:"无手机日一次",category:"学习挑战"},
+  {id:5,title:"一起做志愿者",category:"公益善意"},
+  {id:6,title:"日出/日落打卡",category:"仪式纪念"},
+  {id:7,title:"互做一顿早餐",category:"日常暖心"},
+  {id:8,title:"交换一天手机壁纸",category:"日常暖心"},
+  {id:9,title:"互教一项技能",category:"学习挑战"},
+  {id:10,title:"随机坐公交到终点",category:"微冒险"},
+  {id:11,title:"去陌生博物馆",category:"微冒险"},
+  {id:12,title:"书店互选一本书",category:"日常暖心"},
+  {id:13,title:"DIY 相册或手账",category:"手作纪念"},
+  {id:14,title:"拍一次主题写真",category:"仪式纪念"},
+  {id:15,title:"月度小短片剪辑",category:"手作纪念"},
+  {id:16,title:"30 天早起/健身打卡",category:"学习挑战"},
+  {id:17,title:"做一顿家宴给家人",category:"公益善意"},
+  {id:18,title:"写并埋一封一年后的信",category:"仪式纪念"},
+  {id:19,title:"夜观星空/找星座",category:"微冒险"},
+  {id:20,title:"一起滑冰/滑板",category:"户外体力"},
+  {id:21,title:"互换播放列表",category:"日常暖心"},
+  {id:22,title:"在家布置电影之夜",category:"日常暖心"},
+  {id:23,title:"随机菜谱一起做",category:"日常暖心"},
+  {id:24,title:"去看一场现场演出",category:"仪式纪念"},
+  {id:25,title:"共写年度心愿板",category:"仪式纪念"},
+  {id:26,title:"拼一幅 1000 片拼图",category:"手作纪念"},
+  {id:27,title:"共同读完一本书并讨论",category:"学习挑战"},
+  {id:28,title:"手写 10 张小卡片放惊喜",category:"日常暖心"},
+  {id:29,title:"城市夜跑 5 公里",category:"户外体力"},
+  {id:30,title:"拍一次胶片/拍立得",category:"手作纪念"},
+  {id:31,title:"做一次主题晚餐（国/风/色）",category:"日常暖心"},
+  {id:32,title:"做一支双人舞",category:"学习挑战"},
+  {id:33,title:"互换一天穿搭风格",category:"日常暖心"},
+  {id:34,title:"尝试一项水上运动",category:"户外体力"},
+  {id:35,title:"去看海/湖边发呆",category:"微冒险"},
+  {id:36,title:"一起搭帐篷露营",category:"户外体力"},
+  {id:37,title:"给彼此做一件手作礼物",category:"手作纪念"},
+  {id:38,title:"共建一个迷你阳台花园",category:"手作纪念"},
+  {id:39,title:"学习调 3 款特调饮品",category:"学习挑战"},
+  {id:40,title:"做一次桌游/剧本杀之夜",category:"日常暖心"},
+  {id:41,title:"举办两人 K 歌会",category:"日常暖心"},
+  {id:42,title:"做一次公益捐赠",category:"公益善意"},
+  {id:43,title:"拍一支街头 vlog",category:"微冒险"},
+  {id:44,title:"互录 1 分钟夸夸音频",category:"日常暖心"},
+  {id:45,title:"共同整理旧物捐出",category:"公益善意"},
+  {id:46,title:"策划惊喜生日/纪念日",category:"仪式纪念"},
+  {id:47,title:"给未来的自己发邮件",category:"仪式纪念"},
+  {id:48,title:"尝试一次新的运动课",category:"户外体力"},
+  {id:49,title:"策划一场城市寻宝",category:"微冒险"},
+  {id:50,title:"学习一门新菜系",category:"学习挑战"},
+  {id:51,title:"制作香薰/蜡烛",category:"手作纪念"},
+  {id:52,title:"整理共同照片做年册",category:"手作纪念"},
+  {id:53,title:"在屋顶/阳台露天晚餐",category:"仪式纪念"},
+  {id:54,title:"写一封感谢信给对方父母",category:"公益善意"},
+  {id:55,title:"一起拼乐高/模型",category:"手作纪念"},
+  {id:56,title:"共同学理财/做预算",category:"学习挑战"},
+  {id:57,title:"学习一门手艺（木作/陶艺）",category:"手作纪念"},
+  {id:58,title:"安排一次盲盒式约会",category:"日常暖心"},
+  {id:59,title:"共建歌单“我们的年度BGM”",category:"日常暖心"},
+  {id:60,title:"为对方写一首短诗/歌词",category:"日常暖心"},
+  {id:61,title:"做一次城市美食地图打卡",category:"微冒险"},
+  {id:62,title:"尝试攀岩/抱石",category:"户外体力"},
+  {id:63,title:"夜晚看流星/流星雨",category:"微冒险"},
+  {id:64,title:"去乡村/郊区采摘",category:"微冒险"},
+  {id:65,title:"DIY 手链/戒指",category:"手作纪念"},
+  {id:66,title:"两人做播客/语音日记",category:"手作纪念"},
+  {id:67,title:"挑一件家务交叉体验",category:"学习挑战"},
+  {id:68,title:"做一次纸质信封时间胶囊",category:"仪式纪念"},
+  {id:69,title:"设立两人健康挑战周",category:"学习挑战"},
+  {id:70,title:"共学一门外语 30 天",category:"学习挑战"},
+  {id:71,title:"无灯晚餐（烛光）",category:"仪式纪念"},
+  {id:72,title:"策划一次“换个城市生活一天”",category:"微冒险"},
+  {id:73,title:"参加一次公益跑/义卖",category:"公益善意"},
+  {id:74,title:"交换一日行程安排",category:"日常暖心"},
+  {id:75,title:"拍一张每月固定姿势合照",category:"手作纪念"},
+  {id:76,title:"学习茶/咖啡手冲并互评",category:"学习挑战"},
+  {id:77,title:"做一次深夜长谈",category:"日常暖心"},
+  {id:78,title:"整理共同愿望清单墙",category:"仪式纪念"},
+  {id:79,title:"学习魔术/小把戏",category:"学习挑战"},
+  {id:80,title:"尝试一周无外卖",category:"学习挑战"},
+  {id:81,title:"挑一部经典电影共看与复盘",category:"学习挑战"},
+  {id:82,title:"一起做一幅涂鸦/墙绘",category:"手作纪念"},
+  {id:83,title:"学习写毛笔/硬笔字",category:"学习挑战"},
+  {id:84,title:"共写一篇小短篇故事",category:"手作纪念"},
+  {id:85,title:"把房间角落改造焕新",category:"手作纪念"},
+  {id:86,title:"体验一次密室逃脱",category:"微冒险"},
+  {id:87,title:"夜晚听城市声景散步",category:"日常暖心"},
+  {id:88,title:"做一次盲品咖啡/茶",category:"学习挑战"},
+  {id:89,title:"尝试两人瑜伽/普拉提",category:"户外体力"},
+  {id:90,title:"设计共同签名/印章",category:"手作纪念"},
+  {id:91,title:"做一次抽象画互赠",category:"手作纪念"},
+  {id:92,title:"参加线下讲座/展览",category:"学习挑战"},
+  {id:93,title:"共同做一份年度账本",category:"学习挑战"},
+  {id:94,title:"给未来的家设计一个平面草图",category:"手作纪念"},
+  {id:95,title:"拍一组黑白人像",category:"手作纪念"},
+  {id:96,title:"制作一套贴纸/周边",category:"手作纪念"},
+  {id:97,title:"策划一场惊喜快闪告白",category:"仪式纪念"},
+  {id:98,title:"共学一支抖/街舞编舞",category:"学习挑战"},
+  {id:99,title:"一起打理数码相册/云盘",category:"手作纪念"},
+  {id:100,title:"年度收官：选10张照片做纪念册",category:"仪式纪念"}
+];
+
+const statusLabels={todo:"待做",doing:"进行中",done:"已完成"};
+const storageKey="couple100-2026";
+let state=loadState();
+let lastCelebrated=0;
+
+function loadState(){
+  const raw=localStorage.getItem(storageKey);
+  if(!raw) return {};
+  try{return JSON.parse(raw);}catch(e){return {};}
+}
+function saveState(){localStorage.setItem(storageKey,JSON.stringify(state));}
+
+function render(){
+  const search=document.querySelector("#search").value.toLowerCase();
+  const cat=document.querySelector("#category").value;
+  const sf=document.querySelector("#status-filter").value;
+  const sort=document.querySelector("#sort").value;
+  const list=document.querySelector("#list");
+  list.innerHTML="";
+  let doneCount=0,doingCount=0,todoCount=0;
+  const catCount={};
+  data.forEach(item=>{
+    const st=state[item.id]?.status||"todo";
+    if(st==="done") doneCount++;
+    if(st==="doing") doingCount++;
+    if(st==="todo") todoCount++;
+    catCount[item.category]=(catCount[item.category]||0)+1;
+  });
+  const filtered=[...data].filter(item=>{
+    const st=state[item.id]?.status||"todo";
+    const note=(state[item.id]?.note||"").toLowerCase();
+    const matchSearch=item.title.toLowerCase().includes(search)||note.includes(search);
+    const matchCat=cat==="all"||item.category===cat;
+    const matchStatus=sf==="all"||st===sf;
+    return matchSearch&&matchCat&&matchStatus;
+  }).sort((a,b)=>{
+    const sa=state[a.id]?.status||"todo";
+    const sb=state[b.id]?.status||"todo";
+    if(sort==="status"){
+      const order={todo:0,doing:1,done:2};
+      return order[sa]-order[sb];
+    }
+    if(sort==="category"){
+      if(a.category===b.category) return a.id-b.id;
+      return a.category.localeCompare(b.category,"zh-CN");
+    }
+    if(sort==="random"){
+      return Math.random()-0.5;
+    }
+    return a.id-b.id;
+  });
+  filtered.forEach(item=>{
+    const card=document.createElement("div");
+    card.className="card";
+    const st=state[item.id]?.status||"todo";
+    const note=state[item.id]?.note||"";
+    card.innerHTML=`
+      <div class="meta">
+        <span class="badge">${item.category}</span>
+        <span class="badge">#${item.id.toString().padStart(3,"0")}</span>
+      </div>
+      <h3>${item.title}</h3>
+      <div class="status" data-id="${item.id}">
+        ${["todo","doing","done"].map(s=>`<button data-status="${s}" class="${st===s?"active":""}">${statusLabels[s]}</button>`).join("")}
+      </div>
+      <textarea class="note" placeholder="写下心情或安排..." data-id="${item.id}">${note}</textarea>
+    `;
+    list.appendChild(card);
+  });
+  list.querySelectorAll(".status button").forEach(btn=>{
+    btn.onclick=()=>{
+      const id=btn.parentElement.dataset.id;
+      const prev=state[id]?.status||"todo";
+      state[id]={...(state[id]||{}),status:btn.dataset.status};
+      saveState();
+      if(btn.dataset.status==="done"&&prev!=="done") celebrate();
+      render();
+    };
+  });
+  list.querySelectorAll(".note").forEach(area=>{
+    area.oninput=()=>{
+      const id=area.dataset.id;
+      state[id]={...(state[id]||{}),note:area.value};
+      saveState();
+    };
+  });
+  const pct=Math.round((doneCount/data.length)*100);
+  document.querySelector("#progress-text").textContent=`已完成 ${doneCount}/${data.length} (${pct}%)`;
+  document.querySelector("#progress-bar").style.width=pct+"%";
+  document.querySelector("#category-stats").textContent=`待做 ${todoCount} / 进行中 ${doingCount} / 已完成 ${doneCount} · `+Object.entries(catCount).map(([k,v])=>`${k}·${v}`).join("  ");
+}
+function setupFilters(){
+  const catSel=document.querySelector("#category");
+  const cats=[...new Set(data.map(d=>d.category))];
+  cats.forEach(c=>{
+    const opt=document.createElement("option");
+    opt.value=c;opt.textContent=c;catSel.appendChild(opt);
+  });
+  ["search","category","status-filter","sort"].forEach(id=>{
+    document.querySelector("#"+id).oninput=render;
+  });
+}
+function setupButtons(){
+  document.querySelector("#random").onclick=()=>{
+    const visible=[...document.querySelectorAll(".card")];
+    if(!visible.length) return;
+    const pick=visible[Math.floor(Math.random()*visible.length)];
+    pick.scrollIntoView({behavior:"smooth",block:"center"});
+    pick.style.outline="2px solid var(--accent2)";
+    setTimeout(()=>pick.style.outline="",1200);
+  };
+  document.querySelector("#export").onclick=()=>{
+    const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="couple100-2026-backup.json";a.click();
+    URL.revokeObjectURL(url);
+  };
+  const file=document.querySelector("#import-file");
+  document.querySelector("#import").onclick=()=>file.click();
+  file.onchange=e=>{
+    const f=e.target.files[0];if(!f) return;
+    const reader=new FileReader();
+    reader.onload=evt=>{
+      try{state=JSON.parse(evt.target.result)||{};saveState();render();alert("导入成功");}
+      catch(err){alert("导入失败，检查 JSON 格式");}
+    };
+    reader.readAsText(f);
+  };
+}
+function countdown(){
+  const end=new Date("2026-12-31T23:59:59");
+  const now=new Date();
+  const diff=end-now;
+  if(diff<=0){document.querySelector("#countdown").textContent="2026 我们已满载而归！";return;}
+  const d=Math.floor(diff/86400000);
+  document.querySelector("#countdown").textContent=`距离 2026 结束还剩 ${d} 天，一起完成这 100 件吧。`;
+}
+function celebrate(){
+  const now=Date.now();
+  if(now-lastCelebrated<1200) return;
+  lastCelebrated=now;
+  const colors=["#38bdf8","#facc15","#f472b6","#a78bfa"];
+  for(let i=0;i<30;i++){
+    const conf=document.createElement("div");
+    conf.style.position="fixed";
+    conf.style.left=Math.random()*100+"vw";
+    conf.style.top="-10px";
+    conf.style.width="8px";
+    conf.style.height="14px";
+    conf.style.background=colors[i%colors.length];
+    conf.style.opacity="0.9";
+    conf.style.transform=`rotate(${Math.random()*60-30}deg)`;
+    conf.style.borderRadius="2px";
+    conf.style.pointerEvents="none";
+    conf.style.zIndex="9999";
+    document.body.appendChild(conf);
+    const duration=1200+Math.random()*800;
+    conf.animate([
+      {transform:conf.style.transform, top:"-10px"},
+      {transform:"translateY(100vh) rotate(0deg)", top:"100vh"}
+    ],{duration,easing:"cubic-bezier(0.23, 1, 0.32, 1)"});
+    setTimeout(()=>conf.remove(),duration);
+  }
+}
+
+setupFilters();setupButtons();countdown();render();
+</script>
+</body>
+</html>
